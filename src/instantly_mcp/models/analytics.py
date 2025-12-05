@@ -13,7 +13,7 @@ class GetCampaignAnalyticsInput(BaseModel):
     Metrics: opens, clicks, replies, bounces. Filter by campaign(s) and dates.
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     campaign_id: Optional[str] = Field(
         default=None,
@@ -34,7 +34,7 @@ class GetCampaignAnalyticsInput(BaseModel):
 class GetDailyCampaignAnalyticsInput(BaseModel):
     """Input for getting day-by-day campaign performance analytics."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     campaign_id: Optional[str] = Field(
         default=None,
@@ -51,7 +51,7 @@ class GetDailyCampaignAnalyticsInput(BaseModel):
 class GetWarmupAnalyticsInput(BaseModel):
     """Input for getting warmup metrics for account(s)."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     emails: Optional[list[str]] = Field(default=None, description="Account emails")
     email: Optional[str] = Field(default=None, description="Single email (alternative)")

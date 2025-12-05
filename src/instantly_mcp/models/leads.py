@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field, ConfigDict
 class ListLeadsInput(BaseModel):
     """Input for listing leads with pagination and filtering."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    # Use extra="ignore" to be tolerant of unexpected fields from LLMs
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     campaign: Optional[str] = Field(default=None, description="Campaign UUID")
     list_id: Optional[str] = Field(default=None, description="List UUID")
@@ -23,17 +24,17 @@ class ListLeadsInput(BaseModel):
         description="FILTER_VAL_CONTACTED, FILTER_VAL_NOT_CONTACTED, FILTER_VAL_COMPLETED, FILTER_VAL_ACTIVE, etc."
     )
     distinct_contacts: Optional[bool] = Field(default=None, description="Dedupe by email")
-    limit: Optional[int] = Field(default=None, ge=1, le=100, description="1-100, default: 100")
+    limit: Optional[int] = Field(default=100, ge=1, le=100, description="Results per page (1-100, default: 100)")
     starting_after: Optional[str] = Field(
         default=None,
-        description="Cursor from pagination.next_starting_after"
+        description="Pagination cursor - use value from pagination.next_starting_after to get next page"
     )
 
 
 class GetLeadInput(BaseModel):
     """Input for getting lead details."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     lead_id: str = Field(..., description="Lead UUID")
 
@@ -45,7 +46,7 @@ class CreateLeadInput(BaseModel):
     Use skip_if_in_campaign to prevent duplicates.
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     campaign: Optional[str] = Field(default=None, description="Campaign UUID")
     email: str = Field(..., description="Required - lead email address")
@@ -80,7 +81,7 @@ class UpdateLeadInput(BaseModel):
     ⚠️ custom_variables replaces entire object - include existing values!
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     lead_id: str = Field(..., description="Lead UUID")
     personalization: Optional[str] = Field(default=None)
@@ -101,10 +102,14 @@ class UpdateLeadInput(BaseModel):
 class ListLeadListsInput(BaseModel):
     """Input for listing lead lists with pagination."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    # Use extra="ignore" to be tolerant of unexpected fields from LLMs
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
-    limit: Optional[int] = Field(default=None, ge=1, le=100, description="1-100, default: 100")
-    starting_after: Optional[str] = Field(default=None, description="Cursor from pagination")
+    limit: Optional[int] = Field(default=100, ge=1, le=100, description="Results per page (1-100, default: 100)")
+    starting_after: Optional[str] = Field(
+        default=None, 
+        description="Pagination cursor - use value from pagination.next_starting_after to get next page"
+    )
     has_enrichment_task: Optional[bool] = Field(default=None)
     search: Optional[str] = Field(default=None, description="Search by name")
 
@@ -116,7 +121,7 @@ class CreateLeadListInput(BaseModel):
     Set has_enrichment_task=true for auto-enrich.
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     name: str = Field(..., description="List name")
     has_enrichment_task: Optional[bool] = Field(default=None)
@@ -126,7 +131,7 @@ class CreateLeadListInput(BaseModel):
 class UpdateLeadListInput(BaseModel):
     """Input for updating a lead list."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     list_id: str = Field(..., description="List UUID")
     name: Optional[str] = Field(default=None)
@@ -137,7 +142,7 @@ class UpdateLeadListInput(BaseModel):
 class GetVerificationStatsInput(BaseModel):
     """Input for getting email verification stats for a list."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     list_id: str = Field(..., description="List UUID")
 
@@ -145,7 +150,7 @@ class GetVerificationStatsInput(BaseModel):
 class LeadData(BaseModel):
     """Single lead data for bulk operations."""
     
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     
     email: str = Field(..., description="Lead email (required)")
     first_name: Optional[str] = Field(default=None)
@@ -167,7 +172,7 @@ class BulkAddLeadsInput(BaseModel):
     10-100x faster than create_lead for large imports.
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     leads: list[LeadData] = Field(
         ..., min_length=1, max_length=1000,
@@ -186,7 +191,7 @@ class BulkAddLeadsInput(BaseModel):
 class DeleteLeadInput(BaseModel):
     """Input for deleting a lead. 🗑️ PERMANENTLY delete. CANNOT UNDO!"""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     lead_id: str = Field(..., description="Lead UUID to DELETE")
 
@@ -198,7 +203,7 @@ class MoveLeadsInput(BaseModel):
     Runs as background job for large operations.
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     to_campaign_id: Optional[str] = Field(
         default=None,

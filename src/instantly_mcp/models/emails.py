@@ -9,10 +9,14 @@ from pydantic import BaseModel, Field, ConfigDict
 class ListEmailsInput(BaseModel):
     """Input for listing emails with pagination and filtering."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    # Use extra="ignore" to be tolerant of unexpected fields from LLMs
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
-    limit: Optional[int] = Field(default=None, ge=1, le=100, description="1-100, default: 100")
-    starting_after: Optional[str] = Field(default=None, description="Cursor from pagination")
+    limit: Optional[int] = Field(default=100, ge=1, le=100, description="Results per page (1-100, default: 100)")
+    starting_after: Optional[str] = Field(
+        default=None, 
+        description="Pagination cursor - use value from pagination.next_starting_after to get next page"
+    )
     search: Optional[str] = Field(
         default=None,
         description="Search (use 'thread:UUID' for threads)"
@@ -39,7 +43,7 @@ class ListEmailsInput(BaseModel):
 class GetEmailInput(BaseModel):
     """Input for getting email details."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     email_id: str = Field(..., description="Email UUID")
 
@@ -47,7 +51,7 @@ class GetEmailInput(BaseModel):
 class EmailBody(BaseModel):
     """Email body content."""
     
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     
     html: Optional[str] = Field(default=None, description="HTML content")
     text: Optional[str] = Field(default=None, description="Plain text content")
@@ -60,7 +64,7 @@ class ReplyToEmailInput(BaseModel):
     🚨 SENDS REAL EMAIL! Confirm with user first. Cannot undo!
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     reply_to_uuid: str = Field(..., description="Email UUID to reply to")
     eaccount: str = Field(..., description="Sender account (must be active)")
@@ -75,7 +79,7 @@ class VerifyEmailInput(BaseModel):
     Takes 5-45 seconds. Returns status, score, flags.
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     email: str = Field(..., description="Email to verify")
 

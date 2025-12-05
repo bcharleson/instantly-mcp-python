@@ -25,7 +25,7 @@ class CreateCampaignInput(BaseModel):
     Use sequence_steps for multi-step email sequences.
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     name: str = Field(..., description="Campaign name")
     subject: str = Field(
@@ -79,15 +79,16 @@ class CreateCampaignInput(BaseModel):
 class ListCampaignsInput(BaseModel):
     """Input for listing campaigns with pagination."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    # Use extra="ignore" to be tolerant of unexpected fields from LLMs
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     limit: Optional[int] = Field(
-        default=None, ge=1, le=100,
-        description="1-100, default: 100"
+        default=100, ge=1, le=100,
+        description="Results per page (1-100, default: 100)"
     )
     starting_after: Optional[str] = Field(
         default=None,
-        description="Cursor from pagination.next_starting_after"
+        description="Pagination cursor - use value from pagination.next_starting_after to get next page"
     )
     search: Optional[str] = Field(
         default=None,
@@ -102,7 +103,7 @@ class ListCampaignsInput(BaseModel):
 class GetCampaignInput(BaseModel):
     """Input for getting campaign details."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     campaign_id: str = Field(..., description="Campaign UUID")
 
@@ -114,7 +115,7 @@ class UpdateCampaignInput(BaseModel):
     Common updates: name, sequences, tracking, limits, email_list.
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     campaign_id: str = Field(..., description="Campaign to update")
     name: Optional[str] = Field(default=None)
@@ -157,7 +158,7 @@ class ActivateCampaignInput(BaseModel):
     Prerequisites: accounts, leads, sequences, schedule must be configured.
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     campaign_id: str = Field(..., description="Campaign UUID to activate")
 
@@ -169,7 +170,7 @@ class PauseCampaignInput(BaseModel):
     Stops sending but leads remain. Use activate_campaign to resume.
     """
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     campaign_id: str = Field(..., description="Active campaign UUID")
 

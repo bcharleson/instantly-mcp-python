@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr
 class WarmupAdvancedSettings(BaseModel):
     """Advanced warmup configuration."""
     
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     
     warm_ctd: Optional[bool] = Field(default=None, description="Warm CTD enabled")
     open_rate: Optional[int] = Field(default=None, ge=0, le=100, description="Target open rate %")
@@ -22,7 +22,7 @@ class WarmupAdvancedSettings(BaseModel):
 class WarmupSettings(BaseModel):
     """Warmup configuration settings."""
     
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     
     limit: Optional[int] = Field(default=None, ge=1, description="Daily warmup email limit")
     advanced: Optional[WarmupAdvancedSettings] = Field(default=None, description="Advanced settings")
@@ -34,15 +34,16 @@ class WarmupSettings(BaseModel):
 class ListAccountsInput(BaseModel):
     """Input for listing email accounts."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    # Use extra="ignore" to be tolerant of unexpected fields from LLMs
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     limit: Optional[int] = Field(
-        default=None, ge=1, le=100,
-        description="1-100, default: 100"
+        default=100, ge=1, le=100,
+        description="Results per page (1-100, default: 100)"
     )
     starting_after: Optional[str] = Field(
         default=None,
-        description="Cursor from pagination.next_starting_after"
+        description="Pagination cursor - use value from pagination.next_starting_after to get next page"
     )
     search: Optional[str] = Field(
         default=None,
@@ -65,7 +66,7 @@ class ListAccountsInput(BaseModel):
 class GetAccountInput(BaseModel):
     """Input for getting account details."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     email: str = Field(..., description="Account email address")
 
@@ -73,7 +74,7 @@ class GetAccountInput(BaseModel):
 class CreateAccountInput(BaseModel):
     """Input for creating an email account with IMAP/SMTP credentials."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     email: str = Field(..., description="Email address")
     first_name: str = Field(..., description="First name")
@@ -94,7 +95,7 @@ class CreateAccountInput(BaseModel):
 class UpdateAccountInput(BaseModel):
     """Input for updating account settings (partial update)."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     email: str = Field(..., description="Account to update")
     first_name: Optional[str] = Field(default=None)
@@ -116,7 +117,7 @@ class UpdateAccountInput(BaseModel):
 class ManageAccountStateInput(BaseModel):
     """Input for managing account state (pause, resume, warmup control, vitals test)."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     email: str = Field(..., description="Account email")
     action: Literal["pause", "resume", "enable_warmup", "disable_warmup", "test_vitals"] = Field(
@@ -127,7 +128,7 @@ class ManageAccountStateInput(BaseModel):
 class DeleteAccountInput(BaseModel):
     """Input for deleting an account. ⚠️ PERMANENT - CANNOT UNDO!"""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
     
     email: str = Field(..., description="Email to DELETE PERMANENTLY")
 
