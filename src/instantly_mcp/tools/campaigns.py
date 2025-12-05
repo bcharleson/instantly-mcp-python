@@ -122,7 +122,11 @@ async def create_campaign(params: CreateCampaignInput) -> str:
 
 async def list_campaigns(params: Optional[ListCampaignsInput] = None) -> str:
     """
-    List campaigns with pagination. Filter by name search or tags.
+    List campaigns with cursor-based pagination (100 per page).
+    
+    PAGINATION: If response contains pagination.next_starting_after, there are 
+    MORE results. Call again with starting_after=<that value> to get next page.
+    Continue until pagination.next_starting_after is null.
     
     Note: search filters by campaign NAME only, not by status.
     To filter by status, use campaign_status in get_daily_campaign_analytics.
@@ -150,6 +154,14 @@ async def list_campaigns(params: Optional[ListCampaignsInput] = None) -> str:
         query_params["tag_ids"] = params.tag_ids
     
     result = await client.get("/campaigns", params=query_params)
+    
+    # Add pagination guidance for LLMs
+    if isinstance(result, dict):
+        pagination = result.get("pagination", {})
+        next_cursor = pagination.get("next_starting_after")
+        if next_cursor:
+            result["_pagination_hint"] = f"MORE RESULTS AVAILABLE. Call list_campaigns with starting_after='{next_cursor}' to get next page."
+    
     return json.dumps(result, indent=2)
 
 

@@ -26,7 +26,11 @@ from ..models.leads import (
 
 async def list_leads(params: Optional[ListLeadsInput] = None) -> str:
     """
-    List leads with pagination. Filter by campaign, list, search, or status.
+    List leads with cursor-based pagination (100 per page).
+    
+    PAGINATION: If response contains pagination.next_starting_after, there are 
+    MORE results. Call again with starting_after=<that value> to get next page.
+    Continue until pagination.next_starting_after is null.
     
     Filter values:
     - FILTER_VAL_CONTACTED: Leads that have been contacted
@@ -71,6 +75,14 @@ async def list_leads(params: Optional[ListLeadsInput] = None) -> str:
         body["starting_after"] = params.starting_after
     
     result = await client.post("/leads/list", json=body)
+    
+    # Add pagination guidance for LLMs
+    if isinstance(result, dict):
+        pagination = result.get("pagination", {})
+        next_cursor = pagination.get("next_starting_after")
+        if next_cursor:
+            result["_pagination_hint"] = f"MORE RESULTS AVAILABLE. Call list_leads with starting_after='{next_cursor}' to get next page."
+    
     return json.dumps(result, indent=2)
 
 
@@ -190,7 +202,11 @@ async def update_lead(params: UpdateLeadInput) -> str:
 
 async def list_lead_lists(params: Optional[ListLeadListsInput] = None) -> str:
     """
-    List lead lists with pagination and search.
+    List lead lists with cursor-based pagination (100 per page).
+    
+    PAGINATION: If response contains pagination.next_starting_after, there are 
+    MORE results. Call again with starting_after=<that value> to get next page.
+    Continue until pagination.next_starting_after is null.
     
     Lead lists are containers for organizing leads outside of campaigns.
     Use has_enrichment_task filter to find lists with auto-enrichment enabled.
@@ -216,6 +232,14 @@ async def list_lead_lists(params: Optional[ListLeadListsInput] = None) -> str:
         query_params["search"] = params.search
     
     result = await client.get("/lead-lists", params=query_params)
+    
+    # Add pagination guidance for LLMs
+    if isinstance(result, dict):
+        pagination = result.get("pagination", {})
+        next_cursor = pagination.get("next_starting_after")
+        if next_cursor:
+            result["_pagination_hint"] = f"MORE RESULTS AVAILABLE. Call list_lead_lists with starting_after='{next_cursor}' to get next page."
+    
     return json.dumps(result, indent=2)
 
 

@@ -19,7 +19,11 @@ from ..models.emails import (
 
 async def list_emails(params: Optional[ListEmailsInput] = None) -> str:
     """
-    List emails with pagination. Filter by campaign, account, type, or status.
+    List emails with cursor-based pagination (100 per page).
+    
+    PAGINATION: If response contains pagination.next_starting_after, there are 
+    MORE results. Call again with starting_after=<that value> to get next page.
+    Continue until pagination.next_starting_after is null.
     
     Search tips:
     - Use "thread:UUID" to find all emails in a thread
@@ -78,6 +82,14 @@ async def list_emails(params: Optional[ListEmailsInput] = None) -> str:
         query_params["email_type"] = params.email_type
     
     result = await client.get("/emails", params=query_params)
+    
+    # Add pagination guidance for LLMs
+    if isinstance(result, dict):
+        pagination = result.get("pagination", {})
+        next_cursor = pagination.get("next_starting_after")
+        if next_cursor:
+            result["_pagination_hint"] = f"MORE RESULTS AVAILABLE. Call list_emails with starting_after='{next_cursor}' to get next page."
+    
     return json.dumps(result, indent=2)
 
 

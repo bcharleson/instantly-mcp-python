@@ -21,7 +21,11 @@ from ..models.accounts import (
 
 async def list_accounts(params: Optional[ListAccountsInput] = None) -> str:
     """
-    List email accounts with pagination. Filter by status, provider, or tags.
+    List email accounts with cursor-based pagination (100 per page).
+    
+    PAGINATION: If response contains pagination.next_starting_after, there are 
+    MORE results. Call again with starting_after=<that value> to get next page.
+    Continue until pagination.next_starting_after is null.
     
     Status codes: 1=Active, 2=Paused, -1/-2/-3=Errors
     Provider codes: 1=IMAP, 2=Google, 3=Microsoft, 4=AWS
@@ -53,6 +57,14 @@ async def list_accounts(params: Optional[ListAccountsInput] = None) -> str:
         query_params["tag_ids"] = params.tag_ids
     
     result = await client.get("/accounts", params=query_params)
+    
+    # Add pagination guidance for LLMs
+    if isinstance(result, dict):
+        pagination = result.get("pagination", {})
+        next_cursor = pagination.get("next_starting_after")
+        if next_cursor:
+            result["_pagination_hint"] = f"MORE RESULTS AVAILABLE. Call list_accounts with starting_after='{next_cursor}' to get next page."
+    
     return json.dumps(result, indent=2)
 
 
