@@ -282,6 +282,37 @@ All endpoints verified against: https://developer.instantly.ai/api/v2
 |------|------|-------|------------|--------|
 | 2025-12-05 | `get_warmup_analytics` | 404 Not Found | Changed GET→POST with JSON body | `38dd65f` |
 | 2025-12-05 | `verify_email` | 404 Not Found | Changed GET→POST to initiate verification | `89aeaf0` |
+| 2025-12-05 | `verify_email` | Missing async polling | Added intelligent polling for pending verifications | `420fa35` |
+
+### verify_email Polling Implementation Details
+
+The `verify_email` tool now supports intelligent polling for async verifications:
+
+**How it works:**
+1. POST to `/email-verification` to initiate verification
+2. If response has `verification_status: "pending"`, poll GET `/email-verification/{email}`
+3. Continue polling every 2 seconds until status is "verified" or "invalid"
+4. Timeout after 45 seconds (configurable)
+
+**New optional parameters:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `max_wait_seconds` | 45 | Maximum time to wait (0-120s) |
+| `poll_interval_seconds` | 2.0 | Time between polls (1-10s) |
+| `skip_polling` | false | Return immediately without polling |
+
+**Response includes `_polling_info`:**
+```json
+{
+  "verification_status": "verified",
+  "email": "test@example.com",
+  "_polling_info": {
+    "polls_made": 3,
+    "total_time_seconds": 6.02,
+    "final_status": "verified"
+  }
+}
+```
 
 ---
 
