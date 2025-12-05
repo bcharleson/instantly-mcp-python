@@ -110,39 +110,41 @@ async def get_daily_campaign_analytics(params: Optional[GetDailyCampaignAnalytic
 async def get_warmup_analytics(params: Optional[GetWarmupAnalyticsInput] = None) -> str:
     """
     Get warmup metrics for email account(s).
-    
+
     Provide either:
     - emails: Array of account emails
     - email: Single account email
-    
+
     Returns warmup performance data:
     - Warmup emails sent/received
     - Inbox placement rate
     - Spam rate
     - Reply rate
     - Daily progress
-    
+
     Use date filters to analyze specific time periods.
     """
     client = get_client()
-    
+
     # Handle case where params is None (for OpenAI/non-Claude clients)
     if params is None:
         params = GetWarmupAnalyticsInput()
-    
-    query_params: dict[str, Any] = {}
-    
+
+    # Build JSON body for POST request (per v2 API spec)
+    body: dict[str, Any] = {}
+
     if params.emails:
-        query_params["emails"] = params.emails
+        body["emails"] = params.emails
     elif params.email:
-        query_params["emails"] = [params.email]
-    
+        body["emails"] = [params.email]
+
     if params.start_date:
-        query_params["start_date"] = params.start_date
+        body["start_date"] = params.start_date
     if params.end_date:
-        query_params["end_date"] = params.end_date
-    
-    result = await client.get("/accounts/warmup-analytics", params=query_params)
+        body["end_date"] = params.end_date
+
+    # API requires POST with JSON body, not GET with query params
+    result = await client.post("/accounts/warmup-analytics", json=body)
     return json.dumps(result, indent=2)
 
 
