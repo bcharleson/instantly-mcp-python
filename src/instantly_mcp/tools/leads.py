@@ -6,7 +6,7 @@ The most comprehensive tool category with bulk operations and custom variables.
 """
 
 import json
-from typing import Any
+from typing import Any, Optional
 
 from ..client import get_client
 from ..models.leads import (
@@ -24,7 +24,7 @@ from ..models.leads import (
 )
 
 
-async def list_leads(params: ListLeadsInput) -> str:
+async def list_leads(params: Optional[ListLeadsInput] = None) -> str:
     """
     List leads with pagination. Filter by campaign, list, search, or status.
     
@@ -37,6 +37,10 @@ async def list_leads(params: ListLeadsInput) -> str:
     Use distinct_contacts=true to deduplicate by email.
     """
     client = get_client()
+    
+    # Handle case where params is None (for OpenAI/non-Claude clients)
+    if params is None:
+        params = ListLeadsInput()
     
     # Build request body for POST /leads/list
     body: dict[str, Any] = {}
@@ -182,7 +186,7 @@ async def update_lead(params: UpdateLeadInput) -> str:
     return json.dumps(result, indent=2)
 
 
-async def list_lead_lists(params: ListLeadListsInput) -> str:
+async def list_lead_lists(params: Optional[ListLeadListsInput] = None) -> str:
     """
     List lead lists with pagination and search.
     
@@ -190,6 +194,10 @@ async def list_lead_lists(params: ListLeadListsInput) -> str:
     Use has_enrichment_task filter to find lists with auto-enrichment enabled.
     """
     client = get_client()
+    
+    # Handle case where params is None (for OpenAI/non-Claude clients)
+    if params is None:
+        params = ListLeadListsInput()
     
     query_params = {}
     if params.limit:

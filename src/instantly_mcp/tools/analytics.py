@@ -5,7 +5,7 @@ Instantly MCP Server - Analytics Tools
 """
 
 import json
-from typing import Any
+from typing import Any, Optional
 
 from ..client import get_client
 from ..models.analytics import (
@@ -15,7 +15,7 @@ from ..models.analytics import (
 )
 
 
-async def get_campaign_analytics(params: GetCampaignAnalyticsInput) -> str:
+async def get_campaign_analytics(params: Optional[GetCampaignAnalyticsInput] = None) -> str:
     """
     Get campaign metrics: opens, clicks, replies, bounces.
     
@@ -34,6 +34,10 @@ async def get_campaign_analytics(params: GetCampaignAnalyticsInput) -> str:
     - unsubscribes: Unsubscribe count
     """
     client = get_client()
+    
+    # Handle case where params is None (for OpenAI/non-Claude clients)
+    if params is None:
+        params = GetCampaignAnalyticsInput()
     
     query_params: dict[str, Any] = {}
     
@@ -59,7 +63,7 @@ async def get_campaign_analytics(params: GetCampaignAnalyticsInput) -> str:
     return json.dumps(result, indent=2)
 
 
-async def get_daily_campaign_analytics(params: GetDailyCampaignAnalyticsInput) -> str:
+async def get_daily_campaign_analytics(params: Optional[GetDailyCampaignAnalyticsInput] = None) -> str:
     """
     Get day-by-day campaign performance analytics.
     
@@ -84,6 +88,10 @@ async def get_daily_campaign_analytics(params: GetDailyCampaignAnalyticsInput) -
     """
     client = get_client()
     
+    # Handle case where params is None (for OpenAI/non-Claude clients)
+    if params is None:
+        params = GetDailyCampaignAnalyticsInput()
+    
     query_params: dict[str, Any] = {}
     
     if params.campaign_id:
@@ -99,7 +107,7 @@ async def get_daily_campaign_analytics(params: GetDailyCampaignAnalyticsInput) -
     return json.dumps(result, indent=2)
 
 
-async def get_warmup_analytics(params: GetWarmupAnalyticsInput) -> str:
+async def get_warmup_analytics(params: Optional[GetWarmupAnalyticsInput] = None) -> str:
     """
     Get warmup metrics for email account(s).
     
@@ -117,6 +125,10 @@ async def get_warmup_analytics(params: GetWarmupAnalyticsInput) -> str:
     Use date filters to analyze specific time periods.
     """
     client = get_client()
+    
+    # Handle case where params is None (for OpenAI/non-Claude clients)
+    if params is None:
+        params = GetWarmupAnalyticsInput()
     
     query_params: dict[str, Any] = {}
     

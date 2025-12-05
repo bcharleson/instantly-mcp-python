@@ -5,7 +5,7 @@ Instantly MCP Server - Email Tools
 """
 
 import json
-from typing import Any
+from typing import Any, Optional
 from urllib.parse import quote
 
 from ..client import get_client
@@ -17,7 +17,7 @@ from ..models.emails import (
 )
 
 
-async def list_emails(params: ListEmailsInput) -> str:
+async def list_emails(params: Optional[ListEmailsInput] = None) -> str:
     """
     List emails with pagination. Filter by campaign, account, type, or status.
     
@@ -31,6 +31,10 @@ async def list_emails(params: ListEmailsInput) -> str:
     - emode_all: All emails
     """
     client = get_client()
+    
+    # Handle case where params is None (for OpenAI/non-Claude clients)
+    if params is None:
+        params = ListEmailsInput()
     
     query_params: dict[str, Any] = {}
     

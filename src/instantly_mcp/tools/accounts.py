@@ -5,7 +5,7 @@ Instantly MCP Server - Account Tools
 """
 
 import json
-from typing import Any
+from typing import Any, Optional
 from urllib.parse import quote
 
 from ..client import get_client
@@ -19,7 +19,7 @@ from ..models.accounts import (
 )
 
 
-async def list_accounts(params: ListAccountsInput) -> str:
+async def list_accounts(params: Optional[ListAccountsInput] = None) -> str:
     """
     List email accounts with pagination. Filter by status, provider, or tags.
     
@@ -29,6 +29,10 @@ async def list_accounts(params: ListAccountsInput) -> str:
     Returns accounts with warmup status and campaign eligibility.
     """
     client = get_client()
+    
+    # Handle case where params is None (for OpenAI/non-Claude clients)
+    if params is None:
+        params = ListAccountsInput()
     
     query_params = {}
     if params.limit:

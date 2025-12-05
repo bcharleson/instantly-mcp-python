@@ -5,7 +5,7 @@ Instantly MCP Server - Campaign Tools
 """
 
 import json
-from typing import Any
+from typing import Any, Optional
 
 from ..client import get_client
 from ..models.campaigns import (
@@ -120,7 +120,7 @@ async def create_campaign(params: CreateCampaignInput) -> str:
     return json.dumps(result, indent=2)
 
 
-async def list_campaigns(params: ListCampaignsInput) -> str:
+async def list_campaigns(params: Optional[ListCampaignsInput] = None) -> str:
     """
     List campaigns with pagination. Filter by name search or tags.
     
@@ -130,6 +130,10 @@ async def list_campaigns(params: ListCampaignsInput) -> str:
     Returns campaign list with status, lead counts, and performance metrics.
     """
     client = get_client()
+    
+    # Handle case where params is None (for OpenAI/non-Claude clients)
+    if params is None:
+        params = ListCampaignsInput()
     
     query_params = {}
     if params.limit:
