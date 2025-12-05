@@ -3,7 +3,7 @@ Instantly MCP Server - API Client
 
 HTTP client for making requests to the Instantly.ai API v2.
 Features:
-- Dual authentication (env variable + per-request header)
+- Triple authentication (env variable + URL path + headers)
 - Rate limiting with header tracking
 - Dynamic timeouts based on operation type
 - Comprehensive error handling
@@ -16,6 +16,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 import httpx
+
+# Import per-request API key context (lazy import to avoid circular deps)
+def _get_request_api_key() -> Optional[str]:
+    """Get API key from request context if available."""
+    try:
+        from .http_app import get_request_api_key
+        return get_request_api_key()
+    except ImportError:
+        return None
 
 # API Configuration
 INSTANTLY_API_URL = "https://api.instantly.ai/api/v2"
@@ -116,14 +125,15 @@ class InstantlyClient:
             ValueError: If no API key is available
             httpx.HTTPStatusError: For API errors
         """
-        # Resolve API key (per-request > instance > environment)
-        use_api_key = api_key or self._api_key
+        # Resolve API key (per-request param > request context > instance > environment)
+        use_api_key = api_key or _get_request_api_key() or self._api_key
         if not use_api_key:
             raise ValueError(
                 "Instantly API key is required. Provide via:\n"
-                "  - INSTANTLY_API_KEY environment variable\n"
-                "  - api_key parameter\n"
-                "  - x-instantly-api-key header (HTTP mode)"
+                "  - URL path: /mcp/YOUR_API_KEY\n"
+                "  - Header: Authorization: YOUR_API_KEY\n"
+                "  - Header: x-instantly-api-key: YOUR_API_KEY\n"
+                "  - Environment: INSTANTLY_API_KEY"
             )
         
         # Build request

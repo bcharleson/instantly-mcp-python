@@ -133,6 +133,40 @@ export TOOL_CATEGORIES="leads,analytics"
 
 Valid categories: `accounts`, `campaigns`, `leads`, `emails`, `analytics`
 
+## Authentication Methods
+
+The server supports multiple authentication methods for flexibility:
+
+### 1. URL-based Authentication
+
+Include your API key directly in the URL path:
+
+```
+https://your-server.com/mcp/YOUR_API_KEY
+```
+
+### 2. Header Authentication
+
+```
+URL: https://your-server.com/mcp
+Header: Authorization: YOUR_API_KEY
+```
+
+*Note: Bearer token prefix is optional*
+
+### 3. Custom Header
+
+```
+URL: https://your-server.com/mcp
+Header: x-instantly-api-key: YOUR_API_KEY
+```
+
+### 4. Environment Variable
+
+```bash
+export INSTANTLY_API_KEY="your-api-key-here"
+```
+
 ## MCP Client Configuration
 
 ### Claude Desktop
@@ -154,15 +188,26 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-#### HTTP Mode (Remote)
+#### HTTP Mode with URL Auth (Recommended)
 ```json
 {
   "mcpServers": {
     "instantly": {
-      "url": "http://your-server:8000/mcp",
+      "url": "https://your-server.com/mcp/YOUR_API_KEY"
+    }
+  }
+}
+```
+
+#### HTTP Mode with Header Auth
+```json
+{
+  "mcpServers": {
+    "instantly": {
+      "url": "https://your-server.com/mcp",
       "transport": "streamable-http",
       "headers": {
-        "x-instantly-api-key": "your-api-key-here"
+        "Authorization": "your-api-key-here"
       }
     }
   }
@@ -171,13 +216,25 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ### Cursor IDE
 
-Add to Cursor MCP settings:
+Add to `~/.cursor/mcp.json`:
 
+#### With URL Authentication
 ```json
 {
   "mcpServers": {
     "instantly": {
-      "url": "http://your-server:8000/mcp",
+      "url": "https://your-server.com/mcp/YOUR_API_KEY"
+    }
+  }
+}
+```
+
+#### With Header Authentication
+```json
+{
+  "mcpServers": {
+    "instantly": {
+      "url": "https://your-server.com/mcp",
       "transport": "streamable-http",
       "headers": {
         "x-instantly-api-key": "your-api-key-here"

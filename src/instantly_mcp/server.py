@@ -40,7 +40,10 @@ Instantly.ai V2 API MCP Server - Email automation and campaign management.
 Categories: accounts, campaigns, leads, emails, analytics
 Total tools: 31 (configurable via TOOL_CATEGORIES env var)
 
-For multi-tenant HTTP deployments, provide API key via x-instantly-api-key header.
+Authentication methods for HTTP deployments:
+1. URL path: /mcp/YOUR_API_KEY
+2. Header: Authorization: YOUR_API_KEY (Bearer prefix optional)
+3. Header: x-instantly-api-key: YOUR_API_KEY
 """
 
 # Initialize FastMCP server
@@ -236,14 +239,19 @@ def main():
     # Log startup info
     client = get_client()
     print(f"[Instantly MCP] 🚀 Starting server v{SERVER_VERSION}", file=sys.stderr)
-    print(f"[Instantly MCP] 🔑 API key: {'✅ Configured' if client.has_api_key else '❌ Not set'}", file=sys.stderr)
+    print(f"[Instantly MCP] 🔑 API key: {'✅ Configured' if client.has_api_key else '❌ Not set (multi-tenant mode)'}", file=sys.stderr)
     print(f"[Instantly MCP] 🚌 Transport: {args.transport}", file=sys.stderr)
     
     if args.transport == "http":
-        print(f"[Instantly MCP] 🌐 HTTP endpoint: http://{args.host}:{args.port}", file=sys.stderr)
+        print(f"[Instantly MCP] 🌐 HTTP endpoints:", file=sys.stderr)
+        print(f"[Instantly MCP]    - http://{args.host}:{args.port}/mcp", file=sys.stderr)
+        print(f"[Instantly MCP]    - http://{args.host}:{args.port}/mcp/YOUR_API_KEY", file=sys.stderr)
         if not client.has_api_key:
-            print(f"[Instantly MCP] ⚠️  Multi-tenant mode: Clients must provide x-instantly-api-key header", file=sys.stderr)
-        mcp.run(transport="http", host=args.host, port=args.port)
+            print(f"[Instantly MCP] ⚠️  Multi-tenant mode: Provide API key via URL or headers", file=sys.stderr)
+        
+        # Use custom HTTP app with URL-based auth support
+        from .http_app import run_http_server
+        run_http_server(mcp, host=args.host, port=args.port)
     else:
         if not client.has_api_key:
             print("[Instantly MCP] ❌ API key required for stdio mode", file=sys.stderr)
