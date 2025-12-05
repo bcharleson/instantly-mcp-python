@@ -37,11 +37,14 @@ dev = [
 instantly-mcp = "instantly_mcp.server:main"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/instantly_mcp"]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+instantly_mcp = ["py.typed"]
 
 [tool.ruff]
 line-length = 100
