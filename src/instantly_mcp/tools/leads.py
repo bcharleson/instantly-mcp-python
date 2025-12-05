@@ -39,11 +39,15 @@ async def list_leads(params: Optional[ListLeadsInput] = None) -> str:
     client = get_client()
     
     # Handle case where params is None (for OpenAI/non-Claude clients)
+    # Set default limit=100 to return more results by default
     if params is None:
-        params = ListLeadsInput()
+        params = ListLeadsInput(limit=100)
     
     # Build request body for POST /leads/list
     body: dict[str, Any] = {}
+    
+    # Default to 100 results if no limit specified
+    body["limit"] = params.limit or 100
     
     if params.campaign:
         body["campaign"] = params.campaign
@@ -63,8 +67,6 @@ async def list_leads(params: Optional[ListLeadsInput] = None) -> str:
         body["filter"] = params.filter
     if params.distinct_contacts is not None:
         body["distinct_contacts"] = params.distinct_contacts
-    if params.limit:
-        body["limit"] = params.limit
     if params.starting_after:
         body["starting_after"] = params.starting_after
     
@@ -196,12 +198,16 @@ async def list_lead_lists(params: Optional[ListLeadListsInput] = None) -> str:
     client = get_client()
     
     # Handle case where params is None (for OpenAI/non-Claude clients)
+    # Set default limit=100 to return more results by default
     if params is None:
-        params = ListLeadListsInput()
+        params = ListLeadListsInput(limit=100)
     
     query_params = {}
     if params.limit:
         query_params["limit"] = params.limit
+    else:
+        # Default to 100 results if no limit specified
+        query_params["limit"] = 100
     if params.starting_after:
         query_params["starting_after"] = params.starting_after
     if params.has_enrichment_task is not None:

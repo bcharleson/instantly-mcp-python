@@ -132,12 +132,16 @@ async def list_campaigns(params: Optional[ListCampaignsInput] = None) -> str:
     client = get_client()
     
     # Handle case where params is None (for OpenAI/non-Claude clients)
+    # Set default limit=100 to return more results by default
     if params is None:
-        params = ListCampaignsInput()
+        params = ListCampaignsInput(limit=100)
     
     query_params = {}
     if params.limit:
         query_params["limit"] = params.limit
+    else:
+        # Default to 100 results if no limit specified
+        query_params["limit"] = 100
     if params.starting_after:
         query_params["starting_after"] = params.starting_after
     if params.search:
