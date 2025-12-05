@@ -150,21 +150,22 @@ async def count_unread_emails() -> str:
 async def verify_email(params: VerifyEmailInput) -> str:
     """
     Verify email deliverability (takes 5-45 seconds).
-    
+
+    Initiates a new email verification via POST request.
+    If verification takes longer than 10 seconds, status will be 'pending'.
+
     Returns:
-    - status: valid, invalid, risky, unknown
-    - score: Deliverability score (0-100)
-    - flags: Specific issues detected
-    
-    Common flags:
-    - disposable: Temporary email address
-    - role_based: Generic address (info@, support@)
-    - catch_all: Domain accepts all addresses
-    - smtp_error: Mail server issues
+    - verification_status: pending, verified, invalid
+    - status: success, error (request status, not verification result)
+    - catch_all: Whether the domain accepts all addresses
+    - credits: Remaining verification credits
+    - credits_used: Credits consumed by this verification
     """
     client = get_client()
-    email_encoded = quote(params.email, safe="")
-    result = await client.get(f"/email-verification/{email_encoded}")
+    # Use POST to initiate verification (per v2 API spec)
+    # GET /email-verification/{email} only checks status of existing verification
+    body = {"email": params.email}
+    result = await client.post("/email-verification", json=body)
     return json.dumps(result, indent=2)
 
 
