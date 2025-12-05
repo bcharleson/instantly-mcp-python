@@ -4,7 +4,9 @@ Instantly MCP Server - Email Tools
 5 tools for email management operations.
 """
 
+import asyncio
 import json
+import time
 from typing import Any, Optional
 from urllib.parse import quote
 
@@ -152,7 +154,15 @@ async def verify_email(params: VerifyEmailInput) -> str:
     Verify email deliverability (takes 5-45 seconds).
 
     Initiates a new email verification via POST request.
-    If verification takes longer than 10 seconds, status will be 'pending'.
+    If verification takes longer than 10 seconds, the initial response will have
+    verification_status='pending'. The tool will automatically poll for the final
+    result unless skip_polling=true.
+
+    Parameters:
+    - email: The email address to verify (required)
+    - max_wait_seconds: Maximum time to wait for verification (0-120, default: 45)
+    - poll_interval_seconds: Time between polling attempts (1-10, default: 2)
+    - skip_polling: Return immediately even if status is pending (default: false)
 
     Returns:
     - verification_status: pending, verified, invalid
@@ -160,12 +170,59 @@ async def verify_email(params: VerifyEmailInput) -> str:
     - catch_all: Whether the domain accepts all addresses
     - credits: Remaining verification credits
     - credits_used: Credits consumed by this verification
+    - _polling_info: (added) Information about polling if it occurred
     """
     client = get_client()
+
     # Use POST to initiate verification (per v2 API spec)
-    # GET /email-verification/{email} only checks status of existing verification
     body = {"email": params.email}
     result = await client.post("/email-verification", json=body)
+
+    # Get polling parameters with defaults
+    max_wait = params.max_wait_seconds if params.max_wait_seconds is not None else 45
+    poll_interval = params.poll_interval_seconds if params.poll_interval_seconds is not None else 2.0
+    skip_polling = params.skip_polling if params.skip_polling is not None else False
+
+    # Check if we need to poll
+    verification_status = result.get("verification_status", "")
+
+    if verification_status == "pending" and not skip_polling and max_wait > 0:
+        # Poll for the final result
+        start_time = time.time()
+        poll_count = 0
+        email_encoded = quote(params.email, safe="")
+
+        while time.time() - start_time < max_wait:
+            # Wait before polling
+            await asyncio.sleep(poll_interval)
+            poll_count += 1
+
+            try:
+                # GET endpoint to check verification status
+                poll_result = await client.get(f"/email-verification/{email_encoded}")
+                verification_status = poll_result.get("verification_status", "")
+
+                if verification_status in ("verified", "invalid"):
+                    # Final result received
+                    poll_result["_polling_info"] = {
+                        "polls_made": poll_count,
+                        "total_time_seconds": round(time.time() - start_time, 2),
+                        "final_status": verification_status
+                    }
+                    return json.dumps(poll_result, indent=2)
+
+            except Exception as e:
+                # If polling fails, continue trying until timeout
+                pass
+
+        # Timeout reached while still pending
+        result["_polling_info"] = {
+            "polls_made": poll_count,
+            "total_time_seconds": round(time.time() - start_time, 2),
+            "timeout_reached": True,
+            "note": f"Verification still pending after {max_wait}s. Check status later with GET /email-verification/{params.email}"
+        }
+
     return json.dumps(result, indent=2)
 
 

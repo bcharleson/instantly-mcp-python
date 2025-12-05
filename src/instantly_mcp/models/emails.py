@@ -75,11 +75,27 @@ class ReplyToEmailInput(BaseModel):
 class VerifyEmailInput(BaseModel):
     """
     Input for verifying email deliverability.
-    
+
     Takes 5-45 seconds. Returns status, score, flags.
     """
-    
+
     model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
-    
+
     email: str = Field(..., description="Email to verify")
+    max_wait_seconds: Optional[int] = Field(
+        default=45,
+        ge=0,
+        le=120,
+        description="Maximum time to wait for verification (0 to return immediately, default: 45)"
+    )
+    poll_interval_seconds: Optional[float] = Field(
+        default=2.0,
+        ge=1.0,
+        le=10.0,
+        description="Time between polling attempts (default: 2 seconds)"
+    )
+    skip_polling: Optional[bool] = Field(
+        default=False,
+        description="Return immediately even if status is pending (default: false)"
+    )
 
