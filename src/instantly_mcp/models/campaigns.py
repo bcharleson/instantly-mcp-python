@@ -6,11 +6,18 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
 # Default timezone for business operations
-DEFAULT_TIMEZONE = "America/New_York"
+# NOTE: Instantly.ai officially recommends America/Chicago as default
+# America/New_York is mapped to America/Detroit in Instantly.ai's verified timezone list
+DEFAULT_TIMEZONE = "America/Chicago"
 BUSINESS_PRIORITY_TIMEZONES = [
-    "America/New_York", "America/Chicago", "America/Denver",
-    "America/Los_Angeles", "America/Phoenix", "Europe/London",
-    "Europe/Paris", "Asia/Tokyo", "Australia/Sydney"
+    "America/Chicago",      # Central Time (US) - RECOMMENDED DEFAULT
+    "America/Detroit",      # Eastern Time (US) - maps from America/New_York
+    "America/Boise",        # Mountain Time (US) - maps from America/Denver
+    "America/Dawson",       # Pacific Time (US) - maps from America/Los_Angeles
+    "Europe/Belgrade",      # Central European Time
+    "Asia/Dubai",           # Gulf Standard Time
+    "Asia/Hong_Kong",       # Hong Kong Time
+    "Australia/Melbourne",  # Australian Eastern Time
 ]
 
 

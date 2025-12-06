@@ -193,9 +193,11 @@ async def manage_account_state(params: ManageAccountStateInput) -> str:
     if params.action in ["pause", "resume"]:
         result = await client.post(endpoint)
     elif params.action in ["enable_warmup", "disable_warmup"]:
-        result = await client.post(endpoint, json={"email": params.email})
+        # V2 API expects an array of emails for warmup enable/disable
+        result = await client.post(endpoint, json={"emails": [params.email]})
     else:  # test_vitals
-        result = await client.post(endpoint, json={"email": params.email})
+        # V2 API expects an array of emails for test vitals
+        result = await client.post(endpoint, json={"emails": [params.email]})
     
     return json.dumps(result, indent=2)
 

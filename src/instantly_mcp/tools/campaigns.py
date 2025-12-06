@@ -2,9 +2,17 @@
 Instantly MCP Server - Campaign Tools
 
 6 tools for email campaign management operations.
+
+Implements the Instantly.ai V2 API campaign structure which requires:
+- sequences[0].steps[].type = "email"
+- sequences[0].steps[].variants = [{ subject, body }]
+- sequences[0].steps[].delay = days (integer, not minutes)
+- campaign_schedule.schedules[].name is REQUIRED
+- campaign_schedule.schedules[].days uses string keys ("0"-"6")
 """
 
 import json
+import re
 from typing import Any, Optional
 
 from ..client import get_client
@@ -19,104 +27,273 @@ from ..models.campaigns import (
 )
 
 
+def convert_line_breaks_to_html(text: str) -> str:
+    """
+    Convert plain text line breaks to HTML for Instantly.ai email rendering.
+
+    - Normalizes different line ending formats (\\r\\n, \\r, \\n)
+    - Converts double line breaks to paragraph separations
+    - Converts single line breaks to <br /> tags
+    - Wraps content in <p> tags for proper HTML structure
+
+    Args:
+        text: Plain text to convert to HTML
+
+    Returns:
+        HTML-formatted text
+    """
+    if not text or not isinstance(text, str):
+        return ""
+
+    # Normalize line endings to \n
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+
+    # Split by double line breaks to create paragraphs
+    paragraphs = normalized.split("\n\n")
+
+    result_parts = []
+    for paragraph in paragraphs:
+        # Skip empty paragraphs
+        if not paragraph.strip():
+            continue
+
+        # Convert single line breaks within paragraphs to <br /> tags
+        with_breaks = paragraph.strip().replace("\n", "<br />")
+
+        # Wrap in paragraph tags for proper HTML structure
+        result_parts.append(f"<p>{with_breaks}</p>")
+
+    return "".join(result_parts)
+
+
 async def create_campaign(params: CreateCampaignInput) -> str:
     """
     Create email campaign. Two-step process:
-    
+
     Step 1: Call with name/subject/body to discover available sender accounts
     Step 2: Call again with email_list to assign senders
-    
+
     Personalization variables:
     - {{firstName}}, {{lastName}}, {{companyName}}
     - {{email}}, {{website}}, {{phone}}
     - Any custom variables defined for leads
-    
+
     Use sequence_steps for multi-step follow-up sequences.
+
+    IMPORTANT API v2 Structure:
+    - Each step must have type="email"
+    - Subject/body wrapped in variants array: variants=[{subject, body}]
+    - Delay is in DAYS (not minutes)
+    - Body should be HTML formatted
     """
     client = get_client()
-    
-    # Build campaign body
+
+    # =========================================================================
+    # STEP 0: Account Discovery (Two-step workflow)
+    # =========================================================================
+    # If no email_list provided, fetch eligible accounts and return guidance
+    if not params.email_list:
+        try:
+            accounts_result = await client.get("/accounts", params={"limit": 100})
+            accounts = accounts_result.get("items", []) if isinstance(accounts_result, dict) else []
+
+            # Filter for eligible accounts (active, setup complete, warmup complete)
+            eligible_accounts = [
+                acc for acc in accounts
+                if acc.get("status") == 1
+                and not acc.get("setup_pending")
+                and acc.get("warmup_status") == 1
+            ]
+
+            if not accounts:
+                return json.dumps({
+                    "success": False,
+                    "stage": "no_accounts",
+                    "message": "❌ No accounts found in your workspace.",
+                    "instructions": [
+                        "1. Go to your Instantly.ai dashboard",
+                        "2. Navigate to Accounts section",
+                        "3. Add and verify email accounts",
+                        "4. Complete warmup process for each account",
+                        "5. Then retry campaign creation"
+                    ]
+                }, indent=2)
+
+            if not eligible_accounts:
+                account_issues = [
+                    {
+                        "email": acc.get("email"),
+                        "issues": [
+                            issue for issue in [
+                                "Account not active" if acc.get("status") != 1 else None,
+                                "Setup pending" if acc.get("setup_pending") else None,
+                                "Warmup not complete" if acc.get("warmup_status") != 1 else None
+                            ] if issue
+                        ]
+                    }
+                    for acc in accounts[:10]
+                ]
+
+                return json.dumps({
+                    "success": False,
+                    "stage": "no_eligible_accounts",
+                    "message": "❌ No eligible sender accounts found for campaign creation.",
+                    "total_accounts": len(accounts),
+                    "account_issues": account_issues,
+                    "requirements": [
+                        "Account must be active (status = 1)",
+                        "Setup must be complete (no pending setup)",
+                        "Warmup must be complete (warmup_status = 1)"
+                    ]
+                }, indent=2)
+
+            # Return eligible accounts for user to select
+            eligible_list = [
+                {
+                    "email": acc.get("email"),
+                    "warmup_score": acc.get("warmup_score", 0),
+                    "status": "ready"
+                }
+                for acc in eligible_accounts
+            ]
+
+            return json.dumps({
+                "success": False,
+                "stage": "account_selection_required",
+                "message": "📋 Eligible Sender Accounts Found",
+                "total_eligible_accounts": len(eligible_accounts),
+                "total_accounts": len(accounts),
+                "eligible_accounts": eligible_list,
+                "instructions": (
+                    f"✅ Found {len(eligible_accounts)} eligible sender accounts.\n\n"
+                    "📝 Next Step:\n"
+                    "Call create_campaign again with the email_list parameter containing "
+                    "the sender emails you want to use.\n\n"
+                    f"Example: email_list=[\"{eligible_list[0]['email'] if eligible_list else 'email@domain.com'}\"]"
+                ),
+                "required_action": {
+                    "step": "select_sender_accounts",
+                    "parameter": "email_list",
+                    "example": [acc["email"] for acc in eligible_list[:3]]
+                }
+            }, indent=2)
+
+        except Exception as e:
+            # If account discovery fails, proceed anyway with a warning
+            pass
+
+    # =========================================================================
+    # STEP 1: Build Campaign Payload (API v2 compliant)
+    # =========================================================================
     body: dict[str, Any] = {
         "name": params.name,
     }
-    
-    # Build sequences array with the email content
-    sequences = []
+
+    # -------------------------------------------------------------------------
+    # Build sequences with CORRECT V2 API structure
+    # CRITICAL: Uses type, delay (in days), and variants array
+    # -------------------------------------------------------------------------
     num_steps = params.sequence_steps or 1
-    
+    step_delay_days = params.step_delay_days or 3
+    steps = []
+
     for i in range(num_steps):
-        step: dict[str, Any] = {}
-        
-        # Subject - use custom or base
+        # Determine subject for this step
         if params.sequence_subjects and i < len(params.sequence_subjects):
-            step["subject"] = params.sequence_subjects[i]
+            subject = params.sequence_subjects[i]
         elif i == 0:
-            step["subject"] = params.subject
+            subject = params.subject
         else:
-            step["subject"] = f"Re: {params.subject}"
-        
-        # Body - use custom or base
+            subject = f"Follow-up: {params.subject}"
+
+        # Clean subject (no line breaks allowed)
+        subject = re.sub(r"[\r\n]+", " ", subject).strip()
+
+        # Determine body for this step
         if params.sequence_bodies and i < len(params.sequence_bodies):
-            step["body"] = params.sequence_bodies[i]
+            body_text = params.sequence_bodies[i]
+        elif i == 0:
+            body_text = params.body
         else:
-            step["body"] = params.body
-        
-        # Delay for follow-up steps
-        if i > 0:
-            step["delay"] = (params.step_delay_days or 3) * 24 * 60  # Convert days to minutes
-        
-        sequences.append(step)
-    
-    body["sequences"] = sequences
-    
-    # Add optional settings
+            body_text = f"This is follow-up #{i}.\n\n{params.body}"
+
+        # Convert body to HTML for proper email rendering
+        html_body = convert_line_breaks_to_html(body_text)
+
+        # Build step with CORRECT V2 API structure
+        step: dict[str, Any] = {
+            "type": "email",
+            # delay: days to wait AFTER this step before next step
+            # First step in single-step campaign = 0
+            # First step in multi-step campaign = step_delay_days
+            # Follow-up steps = step_delay_days
+            "delay": step_delay_days if (num_steps > 1 or i > 0) else 0,
+            "variants": [{
+                "subject": subject,
+                "body": html_body
+            }]
+        }
+
+        steps.append(step)
+
+    # V2 API: sequences is array, first element contains steps array
+    body["sequences"] = [{"steps": steps}]
+
+    # -------------------------------------------------------------------------
+    # Add sender accounts
+    # -------------------------------------------------------------------------
     if params.email_list:
         body["email_list"] = params.email_list
-    
-    if params.track_opens is not None:
-        body["open_tracking"] = params.track_opens
-    if params.track_clicks is not None:
-        body["link_tracking"] = params.track_clicks
-    
-    # Schedule settings
+
+    # -------------------------------------------------------------------------
+    # Tracking settings (disabled by default for better deliverability)
+    # -------------------------------------------------------------------------
+    body["open_tracking"] = params.track_opens if params.track_opens is not None else False
+    body["link_tracking"] = params.track_clicks if params.track_clicks is not None else False
+
+    # -------------------------------------------------------------------------
+    # Schedule settings with CORRECT V2 API structure
+    # CRITICAL: name is REQUIRED, days use STRING keys "0"-"6"
+    # -------------------------------------------------------------------------
     body["campaign_schedule"] = {
         "schedules": [{
+            "name": "Default Schedule",  # REQUIRED field
             "timezone": params.timezone or DEFAULT_TIMEZONE,
             "timing": {
                 "from": params.timing_from or "09:00",
                 "to": params.timing_to or "17:00",
             },
             "days": {
-                "sun": False,
-                "mon": True,
-                "tue": True,
-                "wed": True,
-                "thu": True,
-                "fri": True,
-                "sat": False,
+                "0": False,  # Sunday
+                "1": True,   # Monday
+                "2": True,   # Tuesday
+                "3": True,   # Wednesday
+                "4": True,   # Thursday
+                "5": True,   # Friday
+                "6": False,  # Saturday
             }
         }]
     }
-    
-    if params.daily_limit:
-        body["daily_limit"] = params.daily_limit
-    if params.email_gap:
-        body["email_gap"] = params.email_gap
-    if params.stop_on_reply is not None:
-        body["stop_on_reply"] = params.stop_on_reply
-    if params.stop_on_auto_reply is not None:
-        body["stop_on_auto_reply"] = params.stop_on_auto_reply
-    
+
+    # -------------------------------------------------------------------------
+    # Sending limits with sensible defaults
+    # -------------------------------------------------------------------------
+    body["daily_limit"] = params.daily_limit if params.daily_limit else 30
+    body["email_gap"] = params.email_gap if params.email_gap else 10
+    body["stop_on_reply"] = params.stop_on_reply if params.stop_on_reply is not None else True
+    body["stop_on_auto_reply"] = params.stop_on_auto_reply if params.stop_on_auto_reply is not None else True
+
+    # =========================================================================
+    # STEP 2: Make API Request
+    # =========================================================================
     result = await client.post("/campaigns", json=body)
-    
-    # Add helpful guidance if no email_list was provided
-    if not params.email_list:
-        result["_guidance"] = (
-            "Campaign created! Next step: Call create_campaign again with the same "
-            "parameters plus email_list containing sender account emails from your "
-            "available accounts (use list_accounts to see eligible accounts)."
-        )
-    
+
+    # Add success metadata
+    if isinstance(result, dict):
+        result["_success"] = True
+        result["_payload_used"] = body
+        result["_message"] = "Campaign created successfully with API v2 compliant payload"
+
     return json.dumps(result, indent=2)
 
 
