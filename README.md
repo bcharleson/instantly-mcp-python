@@ -4,7 +4,7 @@ A lightweight, robust Model Context Protocol (MCP) server for the **Instantly.ai
 
 ## Features
 
-- **31 tools** across 5 categories (accounts, campaigns, leads, emails, analytics)
+- **38 tools** across 6 categories (accounts, campaigns, leads, emails, analytics, background_jobs)
 - **Dual transport support**: HTTP (remote deployment) + stdio (local)
 - **Lazy loading**: Reduce context window by loading only specific tool categories
 - **Multi-tenant support**: Per-request API keys for HTTP deployments
@@ -78,7 +78,7 @@ python -m instantly_mcp.server
 | `manage_account_state` | Pause, resume, warmup control, test vitals |
 | `delete_account` | ⚠️ Permanently delete account |
 
-### Campaigns (6 tools)
+### Campaigns (8 tools)
 | Tool | Description |
 |------|-------------|
 | `create_campaign` | Create email campaign (two-step process) |
@@ -87,8 +87,10 @@ python -m instantly_mcp.server
 | `update_campaign` | Update campaign settings |
 | `activate_campaign` | Start campaign sending |
 | `pause_campaign` | Stop campaign sending |
+| `delete_campaign` | ⚠️ Permanently delete campaign |
+| `search_campaigns_by_contact` | Find campaigns a contact is enrolled in |
 
-### Leads (11 tools)
+### Leads (12 tools)
 | Tool | Description |
 |------|-------------|
 | `list_leads` | List leads with filtering |
@@ -101,9 +103,10 @@ python -m instantly_mcp.server
 | `get_verification_stats_for_lead_list` | Get email verification stats |
 | `add_leads_to_campaign_or_list_bulk` | Bulk add up to 1,000 leads |
 | `delete_lead` | ⚠️ Permanently delete lead |
+| `delete_lead_list` | ⚠️ Permanently delete lead list |
 | `move_leads_to_campaign_or_list` | Move/copy leads between campaigns/lists |
 
-### Emails (5 tools)
+### Emails (6 tools)
 | Tool | Description |
 |------|-------------|
 | `list_emails` | List emails with filtering |
@@ -111,6 +114,7 @@ python -m instantly_mcp.server
 | `reply_to_email` | 🚨 Send real email reply |
 | `count_unread_emails` | Count unread inbox emails |
 | `verify_email` | Verify email deliverability |
+| `mark_thread_as_read` | Mark email thread as read |
 
 ### Analytics (3 tools)
 | Tool | Description |
@@ -119,19 +123,25 @@ python -m instantly_mcp.server
 | `get_daily_campaign_analytics` | Day-by-day performance |
 | `get_warmup_analytics` | Account warmup metrics |
 
+### Background Jobs (2 tools)
+| Tool | Description |
+|------|-------------|
+| `list_background_jobs` | List async background jobs with pagination |
+| `get_background_job` | Get details of a specific background job |
+
 ## Lazy Loading (Context Window Optimization)
 
 Reduce context window usage by loading only the categories you need:
 
 ```bash
-# Load only accounts and campaigns (12 tools instead of 31)
+# Load only accounts and campaigns (14 tools instead of 38)
 export TOOL_CATEGORIES="accounts,campaigns"
 
 # Load only leads and analytics
 export TOOL_CATEGORIES="leads,analytics"
 ```
 
-Valid categories: `accounts`, `campaigns`, `leads`, `emails`, `analytics`
+Valid categories: `accounts`, `campaigns`, `leads`, `emails`, `analytics`, `background_jobs`
 
 ## Authentication Methods
 
@@ -350,10 +360,11 @@ instantly-mcp-python/
 │       └── tools/               # Tool implementations
 │           ├── __init__.py      # Lazy loading logic
 │           ├── accounts.py      # 6 account tools
-│           ├── campaigns.py     # 6 campaign tools
-│           ├── leads.py         # 11 lead tools
-│           ├── emails.py        # 5 email tools
-│           └── analytics.py     # 3 analytics tools
+│           ├── campaigns.py     # 8 campaign tools
+│           ├── leads.py         # 12 lead tools
+│           ├── emails.py        # 6 email tools
+│           ├── analytics.py     # 3 analytics tools
+│           └── background_jobs.py # 2 background job tools
 ├── pyproject.toml               # Dependencies
 ├── env.example                  # Environment template
 └── README.md                    # This file
