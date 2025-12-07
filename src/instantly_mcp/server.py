@@ -4,7 +4,7 @@ Instantly MCP Server - Main Server
 A lightweight, robust FastMCP server for the Instantly.ai V2 API.
 
 Features:
-- 31 tools across 5 categories (accounts, campaigns, leads, emails, analytics)
+- 38 tools across 6 categories (accounts, campaigns, leads, emails, analytics, background_jobs)
 - Dual transport support (HTTP for remote, stdio for local)
 - Lazy loading via TOOL_CATEGORIES environment variable
 - Per-request API key support for multi-tenant deployments
@@ -13,10 +13,10 @@ Features:
 Usage:
   # HTTP mode (remote deployment)
   fastmcp run src/instantly_mcp/server.py --transport http --port 8000
-  
+
   # stdio mode (local Claude Desktop)
   fastmcp run src/instantly_mcp/server.py
-  
+
   # With lazy loading (reduce context window)
   TOOL_CATEGORIES=accounts,campaigns fastmcp run src/instantly_mcp/server.py
 """
@@ -37,8 +37,8 @@ SERVER_VERSION = "1.0.0"
 SERVER_INSTRUCTIONS = """
 Instantly.ai V2 API MCP Server - Email automation and campaign management.
 
-Categories: accounts, campaigns, leads, emails, analytics
-Total tools: 31 (configurable via TOOL_CATEGORIES env var)
+Categories: accounts, campaigns, leads, emails, analytics, background_jobs
+Total tools: 38 (configurable via TOOL_CATEGORIES env var)
 
 Authentication methods for HTTP deployments:
 1. URL path: /mcp/YOUR_API_KEY
@@ -72,7 +72,7 @@ def register_tools():
         "update_account": {"destructiveHint": False},
         "manage_account_state": {"destructiveHint": False},
         "delete_account": {"destructiveHint": True, "confirmationRequiredHint": True},
-        
+
         # Campaign tools
         "create_campaign": {"destructiveHint": False},
         "list_campaigns": {"readOnlyHint": True},
@@ -80,7 +80,9 @@ def register_tools():
         "update_campaign": {"destructiveHint": False},
         "activate_campaign": {"destructiveHint": False},
         "pause_campaign": {"destructiveHint": False},
-        
+        "delete_campaign": {"destructiveHint": True, "confirmationRequiredHint": True},
+        "search_campaigns_by_contact": {"readOnlyHint": True},
+
         # Lead tools
         "list_leads": {"readOnlyHint": True},
         "get_lead": {"readOnlyHint": True},
@@ -92,19 +94,25 @@ def register_tools():
         "get_verification_stats_for_lead_list": {"readOnlyHint": True},
         "add_leads_to_campaign_or_list_bulk": {"destructiveHint": False},
         "delete_lead": {"destructiveHint": True, "confirmationRequiredHint": True},
+        "delete_lead_list": {"destructiveHint": True, "confirmationRequiredHint": True},
         "move_leads_to_campaign_or_list": {"destructiveHint": False},
-        
+
         # Email tools
         "list_emails": {"readOnlyHint": True},
         "get_email": {"readOnlyHint": True},
         "reply_to_email": {"destructiveHint": True, "confirmationRequiredHint": True},
         "count_unread_emails": {"readOnlyHint": True},
         "verify_email": {"readOnlyHint": True},
-        
+        "mark_thread_as_read": {"destructiveHint": False},
+
         # Analytics tools
         "get_campaign_analytics": {"readOnlyHint": True},
         "get_daily_campaign_analytics": {"readOnlyHint": True},
         "get_warmup_analytics": {"readOnlyHint": True},
+
+        # Background job tools
+        "list_background_jobs": {"readOnlyHint": True},
+        "get_background_job": {"readOnlyHint": True},
     }
     
     for tool_func in tools:
@@ -151,17 +159,19 @@ async def get_server_info() -> str:
         "loaded_categories": categories,
         "tool_counts": {
             "accounts": 6 if "accounts" in categories else 0,
-            "campaigns": 6 if "campaigns" in categories else 0,
-            "leads": 11 if "leads" in categories else 0,
-            "emails": 5 if "emails" in categories else 0,
+            "campaigns": 8 if "campaigns" in categories else 0,  # +2: delete_campaign, search_campaigns_by_contact
+            "leads": 12 if "leads" in categories else 0,  # +1: delete_lead_list
+            "emails": 6 if "emails" in categories else 0,  # +1: mark_thread_as_read
             "analytics": 3 if "analytics" in categories else 0,
+            "background_jobs": 2 if "background_jobs" in categories else 0,
         },
         "total_tools": sum([
             6 if "accounts" in categories else 0,
-            6 if "campaigns" in categories else 0,
-            11 if "leads" in categories else 0,
-            5 if "emails" in categories else 0,
+            8 if "campaigns" in categories else 0,
+            12 if "leads" in categories else 0,
+            6 if "emails" in categories else 0,
             3 if "analytics" in categories else 0,
+            2 if "background_jobs" in categories else 0,
         ]) + 1,  # +1 for get_server_info
         "rate_limit": {
             "remaining": client.rate_limit.remaining,

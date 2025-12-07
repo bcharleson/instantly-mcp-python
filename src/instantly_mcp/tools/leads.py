@@ -20,6 +20,7 @@ from ..models.leads import (
     GetVerificationStatsInput,
     BulkAddLeadsInput,
     DeleteLeadInput,
+    DeleteLeadListInput,
     MoveLeadsInput,
 )
 
@@ -356,24 +357,24 @@ async def delete_lead(params: DeleteLeadInput) -> str:
 async def move_leads_to_campaign_or_list(params: MoveLeadsInput) -> str:
     """
     Move or copy leads between campaigns/lists.
-    
+
     Runs as background job for large operations.
-    
+
     Source selection (use one):
     - ids: Specific lead IDs to move
     - search + campaign/list_id: Filter leads by search term
     - filter + campaign/list_id: Filter by status
-    
+
     Destination (use one):
     - to_campaign_id: Target campaign
     - to_list_id: Target list
-    
+
     Set copy_leads=true to copy instead of move.
     """
     client = get_client()
-    
+
     body: dict[str, Any] = {}
-    
+
     if params.to_campaign_id:
         body["to_campaign_id"] = params.to_campaign_id
     if params.to_list_id:
@@ -414,9 +415,35 @@ async def move_leads_to_campaign_or_list(params: MoveLeadsInput) -> str:
         body["copy_leads"] = params.copy_leads
     if params.check_duplicates is not None:
         body["check_duplicates"] = params.check_duplicates
-    
+
     result = await client.post("/leads/move", json=body)
     return json.dumps(result, indent=2)
+
+
+async def delete_lead_list(params: DeleteLeadListInput) -> str:
+    """
+    🚨 PERMANENTLY delete a lead list. CANNOT UNDO!
+
+    ⚠️ REQUIRES USER CONFIRMATION before executing!
+
+    This action:
+    - Permanently removes the lead list
+    - Leads in the list may be orphaned (check your workflow)
+    - Cannot be reversed
+
+    Before calling this tool, you MUST:
+    1. Confirm with the user that they want to delete this list
+    2. Verify the list_id is correct
+    3. Warn them this action cannot be undone
+    """
+    client = get_client()
+    result = await client.delete(f"/lead-lists/{params.list_id}")
+    return json.dumps({
+        "success": True,
+        "deleted_list_id": params.list_id,
+        "message": "Lead list permanently deleted",
+        **result
+    }, indent=2)
 
 
 # Export all lead tools
@@ -431,6 +458,7 @@ LEAD_TOOLS = [
     get_verification_stats_for_lead_list,
     add_leads_to_campaign_or_list_bulk,
     delete_lead,
+    delete_lead_list,
     move_leads_to_campaign_or_list,
 ]
 

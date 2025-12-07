@@ -190,10 +190,22 @@ class BulkAddLeadsInput(BaseModel):
 
 class DeleteLeadInput(BaseModel):
     """Input for deleting a lead. 🗑️ PERMANENTLY delete. CANNOT UNDO!"""
-    
+
     model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
-    
+
     lead_id: str = Field(..., description="Lead UUID to DELETE")
+
+
+class DeleteLeadListInput(BaseModel):
+    """
+    Input for deleting a lead list. ⚠️ PERMANENT - CANNOT UNDO!
+
+    Requires user confirmation before executing.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
+
+    list_id: str = Field(..., description="Lead List UUID to DELETE PERMANENTLY")
 
 
 class MoveLeadsInput(BaseModel):

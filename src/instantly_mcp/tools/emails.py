@@ -16,6 +16,7 @@ from ..models.emails import (
     GetEmailInput,
     ReplyToEmailInput,
     VerifyEmailInput,
+    MarkThreadAsReadInput,
 )
 
 
@@ -226,6 +227,28 @@ async def verify_email(params: VerifyEmailInput) -> str:
     return json.dumps(result, indent=2)
 
 
+async def mark_thread_as_read(params: MarkThreadAsReadInput) -> str:
+    """
+    Mark an email thread as read.
+
+    Marks all emails in the specified thread as read.
+    Useful for:
+    - Inbox management
+    - Marking conversations as processed
+    - Clearing unread counts
+
+    Returns confirmation of the action.
+    """
+    client = get_client()
+    result = await client.post(f"/emails/threads/{params.thread_id}/mark-as-read")
+    return json.dumps({
+        "success": True,
+        "thread_id": params.thread_id,
+        "message": "Thread marked as read",
+        **result
+    }, indent=2)
+
+
 # Export all email tools
 EMAIL_TOOLS = [
     list_emails,
@@ -233,5 +256,6 @@ EMAIL_TOOLS = [
     reply_to_email,
     count_unread_emails,
     verify_email,
+    mark_thread_as_read,
 ]
 

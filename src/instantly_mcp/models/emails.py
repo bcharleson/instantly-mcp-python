@@ -99,3 +99,15 @@ class VerifyEmailInput(BaseModel):
         description="Return immediately even if status is pending (default: false)"
     )
 
+
+class MarkThreadAsReadInput(BaseModel):
+    """
+    Input for marking an email thread as read.
+
+    Marks all emails in the thread as read.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
+
+    thread_id: str = Field(..., description="Thread UUID to mark as read")
+

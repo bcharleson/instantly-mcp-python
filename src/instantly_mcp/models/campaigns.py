@@ -173,11 +173,35 @@ class ActivateCampaignInput(BaseModel):
 class PauseCampaignInput(BaseModel):
     """
     Input for pausing a campaign.
-    
+
     Stops sending but leads remain. Use activate_campaign to resume.
     """
-    
+
     model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
-    
+
     campaign_id: str = Field(..., description="Active campaign UUID")
+
+
+class DeleteCampaignInput(BaseModel):
+    """
+    Input for deleting a campaign. ⚠️ PERMANENT - CANNOT UNDO!
+
+    Requires user confirmation before executing.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
+
+    campaign_id: str = Field(..., description="Campaign UUID to DELETE PERMANENTLY")
+
+
+class SearchCampaignsByContactInput(BaseModel):
+    """
+    Input for searching campaigns by contact email.
+
+    Finds all campaigns a specific lead/contact is enrolled in.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="ignore")
+
+    contact_email: str = Field(..., description="Email address of the contact to search for")
 

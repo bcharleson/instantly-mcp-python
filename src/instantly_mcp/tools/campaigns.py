@@ -23,6 +23,8 @@ from ..models.campaigns import (
     UpdateCampaignInput,
     ActivateCampaignInput,
     PauseCampaignInput,
+    DeleteCampaignInput,
+    SearchCampaignsByContactInput,
     DEFAULT_TIMEZONE,
 )
 
@@ -452,16 +454,62 @@ async def activate_campaign(params: ActivateCampaignInput) -> str:
 async def pause_campaign(params: PauseCampaignInput) -> str:
     """
     Pause campaign to stop sending.
-    
+
     Effects:
     - Immediately stops all email sending
     - Leads remain in the campaign
     - In-progress sequences are paused
-    
+
     Use activate_campaign to resume sending.
     """
     client = get_client()
     result = await client.post(f"/campaigns/{params.campaign_id}/pause")
+    return json.dumps(result, indent=2)
+
+
+async def delete_campaign(params: DeleteCampaignInput) -> str:
+    """
+    🚨 PERMANENTLY delete a campaign. CANNOT UNDO!
+
+    ⚠️ REQUIRES USER CONFIRMATION before executing!
+
+    This action:
+    - Permanently removes the campaign
+    - Deletes all campaign data, sequences, and settings
+    - Removes leads from this campaign (leads themselves are NOT deleted)
+    - Cannot be reversed
+
+    Before calling this tool, you MUST:
+    1. Confirm with the user that they want to delete this campaign
+    2. Verify the campaign_id is correct
+    3. Warn them this action cannot be undone
+    """
+    client = get_client()
+    result = await client.delete(f"/campaigns/{params.campaign_id}")
+    return json.dumps({
+        "success": True,
+        "deleted_campaign_id": params.campaign_id,
+        "message": "Campaign permanently deleted",
+        **result
+    }, indent=2)
+
+
+async def search_campaigns_by_contact(params: SearchCampaignsByContactInput) -> str:
+    """
+    Find all campaigns that a specific contact/lead is part of.
+
+    Useful for:
+    - Checking if a lead is already in any campaigns
+    - Finding duplicate enrollments
+    - Auditing lead campaign membership
+
+    Returns list of campaigns the contact email is enrolled in.
+    """
+    client = get_client()
+
+    query_params = {"contact_email": params.contact_email}
+
+    result = await client.get("/campaigns/search-by-contact", params=query_params)
     return json.dumps(result, indent=2)
 
 
@@ -473,5 +521,7 @@ CAMPAIGN_TOOLS = [
     update_campaign,
     activate_campaign,
     pause_campaign,
+    delete_campaign,
+    search_campaigns_by_contact,
 ]
 
